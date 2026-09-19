@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Asignación de Turnos y Salas</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --accent: #6366f1;
+      --gold: #facc15;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 0.75rem 0.5rem 2rem 0.5rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    header {
+      padding: 0.5rem 0.25rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.2;
+    }
+
+    .grid-forms {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        padding: 2rem 1rem;
+      }
+      .container {
+        gap: 1.5rem;
+      }
+      header h1 {
+        font-size: 1.75rem;
+      }
+      .grid-forms {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+      font-weight: 600;
+    }
+
+    .input-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      outline: none;
+      width: 100%;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background: #0f172a;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.2rem 0;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--primary);
+      width: 18px;
+      height: 18px;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 0.5rem;
+      border: none;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      font-size: 0.9rem;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.2s, transform 0.05s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0f172a;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      padding: 0.4rem 0.65rem;
+      font-size: 1rem;
+      line-height: 1;
+      border-radius: 0.4rem;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 0.15rem;
+    }
+
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0.85rem;
+      font-style: italic;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      gap: 0.5rem;
+    }
+
+    .tags-container {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-left: 0.35rem;
+    }
+
+    .tag {
+      background: var(--border);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .tag-super {
+      background: rgba(250, 204, 21, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+    }
+
+    .tag-planetario {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+    }
+
+    .tag-plasma {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-top: 0.25rem;
+    }
+
+    @media (min-width: 640px) {
+      .actions {
+        flex-direction: row;
+        justify-content: center;
+      }
+      .btn-generate, .btn-clear {
+        width: auto;
+      }
+    }
+
+    .btn-generate {
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.95rem;
+      padding: 0.8rem 1.5rem;
+      width: 100%;
+    }
+
+    .btn-generate:hover {
+      background: #4f46e5;
+    }
+
+    .btn-clear {
+      background: var(--border);
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.75rem 1.25rem;
+      width: 100%;
+    }
+
+    .schedule-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 1024px) {
+      .schedule-layout {
+        grid-template-columns: 2.2fr 1fr;
+        gap: 1.5rem;
+      }
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .results-table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .results-table th, .results-table td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.5rem;
+      text-align: left;
+    }
+
+    .results-table th {
+      background: #111c44;
+      color: var(--primary);
+      white-space: nowrap;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .results-table tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .table-select {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.4rem;
+      border-radius: 0.4rem;
+      font-size: 0.8rem;
+      width: 100%;
+      outline: none;
+    }
+
+    .table-select:focus {
+      border-color: var(--primary);
+    }
+
+    .table-select.select-lunch {
+      font-weight: 600;
+      min-width: 90px;
+    }
+
+    .table-select.lunch-opt-130 {
+      border-color: #f59e0b;
+      color: #fef08a;
+    }
+
+    .table-select.lunch-opt-200 {
+      border-color: #3b82f6;
+      color: #bfdbfe;
+    }
+
+    .warnings-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .warning-item {
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 3px solid var(--warning);
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.35rem;
+      font-size: 0.78rem;
+      color: #fef3c7;
+      line-height: 1.35;
+    }
+
+    .warning-item.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-left-color: var(--danger);
+      color: #fee2e2;
+    }
+
+    .warning-ok {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 3px solid var(--success);
+      padding: 0.65rem;
+      border-radius: 0.35rem;
+      font-size: 0.8rem;
+      color: #a7f3d0;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .error-msg {
+      color: var(--danger);
+      font-size: 0.85rem;
+      text-align: center;
+      font-weight: 500;
+      padding: 0 0.5rem;
+    }
+
+    .scroll-hint {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: -0.35rem;
+      font-style: italic;
+    }
+
+    @media (min-width: 768px) {
+      .scroll-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Gestor de Turnos y Salas</h1>
+    </header>
+
+    <div class="grid-forms">
+      <section class="card">
+        <h2>Registrar Personal</h2>
+        <div class="input-row">
+          <input type="text" id="person-name" placeholder="Nombre completo" autocomplete="off" />
+          
+          <div class="checkbox-group">
+            <label class="checkbox-label" id="label-super">
+              <input type="checkbox" id="chk-super" />
+              Súper Guía
+            </label>
+            <label class="checkbox-label" id="label-planetario">
+              <input type="checkbox" id="chk-planetario" />
+              Planetario
+            </label>
+            <label class="checkbox-label" id="label-plasma">
+              <input type="checkbox" id="chk-plasma" />
+              Plasma
+            </label>
+          </div>
+
+          <button class="btn-primary" onclick="addPerson()">+ Agregar Persona</button>
+        </div>
+
+        <div class="list" id="people-list">
+          <div class="empty-state">No hay personal registrado.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Salas</h2>
+        <div class="list" id="rooms-list"></div>
+      </section>
+    </div>
+
+    <div class="actions">
+      <button class="btn-generate" onclick="generateSchedule()">Generar Horario Aleatoriamente</button>
+      <button class="btn-clear" onclick="clearTableAssignments()">Limpiar Asignaciones</button>
+    </div>
+
+    <div id="error-output" class="error-msg"></div>
+
+    <div class="schedule-layout">
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <h2>Distribución del Día</h2>
+          <span class="scroll-hint">⇄ Desliza la tabla</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Guías</th>
+                <th>10:00 - 12:30</th>
+                <th>12:30 - 3:00</th>
+                <th>3:00 - 5:00</th>
+                <th>Hora Comida</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 1.5rem;">
+                  Agrega personas en el panel superior para comenzar a asignar turnos.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Panel de Advertencias</h2>
+        <div class="warnings-panel" id="warnings-list">
+          <div class="warning-ok">Sin advertencias activas.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const fixedRooms = [
+      { id: "H-20", name: "H-20", req: "super", defaultLunch: "1:30 PM", neighbor: null },
+      { id: "H-21", name: "H-21 (Planetario)", req: "planetario", defaultLunch: "1:30 PM", neighbor: "H-27" },
+      { id: "H-27", name: "H-27 (Plasma)", req: "plasma", defaultLunch: "2:00 PM", neighbor: "H-21" },
+      { id: "H-22", name: "H-22", req: "general", defaultLunch: "1:30 PM", neighbor: "H-23" },
+      { id: "H-23", name: "H-23", req: "general", defaultLunch: "2:00 PM", neighbor: "H-22" },
+      { id: "H-25", name: "H-25", req: "general", defaultLunch: "1:30 PM", neighbor: "H-26" },
+      { id: "H-26", name: "H-26", req: "general", defaultLunch: "2:00 PM", neighbor: "H-25" }
+    ];
+
+    const people = [];
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function updateSuperGuiaCheckboxState() {
+      const chkSuper = document.getElementById("chk-super");
+      const labelSuper = document.getElementById("label-super");
+      const hasSuper = people.some(p => p.isSuper);
+
+      if (hasSuper) {
+        chkSuper.checked = false;
+        chkSuper.disabled = true;
+        labelSuper.style.opacity = "0.5";
+        labelSuper.title = "Ya hay un Súper Guía registrado";
+      } else {
+        chkSuper.disabled = false;
+        labelSuper.style.opacity = "1";
+        labelSuper.title = "";
+      }
+    }
+
+    function renderRoomsFixed() {
+      const list = document.getElementById("rooms-list");
+      list.innerHTML = "";
+      fixedRooms.forEach(r => {
+        let tag = `<span class="tag">Guía General</span>`;
+        if (r.req === "super") tag = `<span class="tag tag-super">Exclusiva Súper</span>`;
+        else if (r.req === "planetario") tag = `<span class="tag tag-planetario">Planetario</span>`;
+        else if (r.req === "plasma") tag = `<span class="tag tag-plasma">Plasma</span>`;
+
+        list.innerHTML += `
+          <div class="list-item">
+            <span><strong>${r.name}</strong></span>
+            ${tag}
+          </div>
+        `;
+      });
+    }
+
+    function renderPeople() {
+      const list = document.getElementById("people-list");
+      list.innerHTML = "";
+
+      if (people.length === 0) {
+        list.innerHTML = `<div class="empty-state">No hay personal registrado.</div>`;
+        updateSuperGuiaCheckboxState();
+        renderScheduleTable();
+        validateSchedule();
+        return;
+      }
+
+      people.forEach((p, idx) => {
+        let tagsHtml = "";
+        if (p.isSuper) tagsHtml += `<span class="tag tag-super">Súper Guía</span>`;
+        if (p.canPlanetario) tagsHtml += `<span class="tag tag-planetario">Planetario</span>`;
+        if (p.canPlasma) tagsHtml += `<span class="tag tag-plasma">Plasma</span>`;
+        if (!p.isSuper && !p.canPlanetario && !p.canPlasma) tagsHtml += `<span class="tag">Guía General</span>`;
+
+        list.innerHTML += `
+          <div class="list-item">
+            <span><strong>${p.name}</strong><span class="tags-container">${tagsHtml}</span></span>
+            <button class="btn-danger" onclick="removePerson(${idx})">✕</button>
+          </div>
+        `;
+      });
+
+      updateSuperGuiaCheckboxState();
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function addPerson() {
+      const err = document.getElementById("error-output");
+      err.innerText = "";
+      const nameInput = document.getElementById("person-name");
+      const name = nameInput.value.trim();
+      const isSuper = document.getElementById("chk-super").checked;
+      const canPlanetario = document.getElementById("chk-planetario").checked;
+      const canPlasma = document.getElementById("chk-plasma").checked;
+
+      if (!name) return;
+
+      if (isSuper && people.some(p => p.isSuper)) {
+        err.innerText = "Error: Ya existe un Súper Guía registrado.";
+        return;
+      }
+
+      people.push({
+        id: "p_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        name,
+        isSuper,
+        canPlanetario,
+        canPlasma,
+        turno1: isSuper ? "H-20" : "",
+        turno2: isSuper ? "H-20" : "",
+        turno3: isSuper ? "H-20" : "",
+        lunch: "1:30 PM"
+      });
+
+      nameInput.value = "";
+      document.getElementById("chk-super").checked = false;
+      document.getElementById("chk-planetario").checked = false;
+      document.getElementById("chk-plasma").checked = false;
+
+      renderPeople();
+    }
+
+    function removePerson(index) {
+      people.splice(index, 1);
+      renderPeople();
+    }
+
+    function getRoomSelectOptions(person, selectedVal) {
+      let html = `<option value="">-- Sin asignar --</option>`;
+      
+      fixedRooms.forEach(room => {
+        let allowed = true;
+
+        if (room.id === "H-20" && !person.isSuper) {
+          allowed = false;
+        }
+
+        if (room.req === "planetario" && !person.canPlanetario) allowed = false;
+        if (room.req === "plasma" && !person.canPlasma) allowed = false;
+
+        if (allowed) {
+          const sel = selectedVal === room.id ? "selected" : "";
+          html += `<option value="${room.id}" ${sel}>${room.name}</option>`;
+        }
+      });
+      return html;
+    }
+
+    function renderScheduleTable() {
+      const tbody = document.getElementById("results-body");
+
+      if (people.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 1.5rem;">
+              Agrega personas en el panel superior para comenzar a asignar turnos.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = "";
+
+      people.forEach(person => {
+        const lunch130Sel = person.lunch === "1:30 PM" ? "selected" : "";
+        const lunch200Sel = person.lunch === "2:00 PM" ? "selected" : "";
+        const lunchColorClass = person.lunch === "1:30 PM" ? "lunch-opt-130" : "lunch-opt-200";
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${person.name}</strong> ${person.isSuper ? '<span class="tag tag-super">Súper</span>' : ''}</td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno1', this.value)">
+                ${getRoomSelectOptions(person, person.turno1)}
+              </select>
+            </td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno2', this.value)">
+                ${getRoomSelectOptions(person, person.turno2)}
+              </select>
+            </td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno3', this.value)">
+                ${getRoomSelectOptions(person, person.turno3)}
+              </select>
+            </td>
+            <td>
+              <select class="table-select select-lunch ${lunchColorClass}" onchange="updateLunch('${person.id}', this.value)">
+                <option value="1:30 PM" ${lunch130Sel}>1:30 PM</option>
+                <option value="2:00 PM" ${lunch200Sel}>2:00 PM</option>
+              </select>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function updateAssignment(personId, turnKey, value) {
+      const person = people.find(p => p.id === personId);
+      if (!person) return;
+      person[turnKey] = value;
+
+      if (turnKey === "turno2" && value) {
+        const roomObj = fixedRooms.find(r => r.id === value);
+        if (roomObj) {
+          person.lunch = roomObj.defaultLunch;
+        }
+      }
+
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function updateLunch(personId, value) {
+      const person = people.find(p => p.id === personId);
+      if (!person) return;
+      person.lunch = value;
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function clearTableAssignments() {
+      document.getElementById("error-output").innerText = "";
+      people.forEach(p => {
+        p.turno1 = "";
+        p.turno2 = "";
+        p.turno3 = "";
+        p.lunch = "1:30 PM";
+      });
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function validateSchedule() {
+      const panel = document.getElementById("warnings-list");
+      if (people.length === 0) {
+        panel.innerHTML = `<div class="warning-ok">Sin registros para validar.</div>`;
+        return;
+      }
+
+      const warnings = [];
+      const turns = [
+        { key: "turno1", name: "10:00 - 12:30" },
+        { key: "turno2", name: "12:30 - 3:00" },
+        { key: "turno3", name: "3:00 - 5:00" }
+      ];
+
+      people.forEach(p => {
+        if (!p.isSuper) {
+          [p.turno1, p.turno2, p.turno3].forEach((r, idx) => {
+            if (r === "H-20") {
+              warnings.push({
+                type: "danger",
+                msg: `<strong>Violación de rol:</strong> <strong>${p.name}</strong> no es Súper Guía y tiene asignada <strong>H-20</strong> (${turns[idx].name}).`
+              });
+            }
+          });
+        }
+      });
+
+      turns.forEach(t => {
+        const assignedRooms = [];
+        people.forEach(p => {
+          if (p[t.key]) assignedRooms.push({ room: p[t.key], person: p.name });
+        });
+
+        fixedRooms.forEach(room => {
+          const count = assignedRooms.filter(ar => ar.room === room.id).length;
+          if (count === 0) {
+            warnings.push({
+              type: "warning",
+              msg: `<strong>Sala vacía:</strong> Nadie asignado a <strong>${room.name}</strong> en <em>${t.name}</em>.`
+            });
+          } else if (count > 1) {
+            const who = assignedRooms.filter(ar => ar.room === room.id).map(x => x.person).join(", ");
+            warnings.push({
+              type: "danger",
+              msg: `<strong>Conflicto:</strong> ${who} están al mismo tiempo en <strong>${room.name}</strong> (${t.name}).`
+            });
+          }
+        });
+      });
+
+      const isSufficientStaff = people.length >= fixedRooms.length;
+      people.forEach(p => {
+        const roomCounts = {};
+        [p.turno1, p.turno2, p.turno3].forEach(r => {
+          if (r) roomCounts[r] = (roomCounts[r] || 0) + 1;
+        });
+
+        Object.keys(roomCounts).forEach(rId => {
+          if (roomCounts[rId] > 1) {
+            if (p.isSuper && rId === "H-20" && isSufficientStaff) return;
+
+            const rObj = fixedRooms.find(r => r.id === rId);
+            const rName = rObj ? rObj.name : rId;
+            warnings.push({
+              type: "warning",
+              msg: `<strong>Repetición:</strong> <strong>${p.name}</strong> repite <strong>${rName}</strong> ${roomCounts[rId]} veces.`
+            });
+          }
+        });
+      });
+
+      const roomLunchMap = {};
+      people.forEach(p => {
+        if (p.turno2) {
+          roomLunchMap[p.turno2] = { person: p.name, lunch: p.lunch };
+        }
+      });
+
+      const checkedPairs = new Set();
+      fixedRooms.forEach(room => {
+        if (room.neighbor) {
+          const pairKey = [room.id, room.neighbor].sort().join("-");
+          if (!checkedPairs.has(pairKey)) {
+            checkedPairs.add(pairKey);
+            const rA = roomLunchMap[room.id];
+            const rB = roomLunchMap[room.neighbor];
+
+            if (rA && rB && rA.lunch === rB.lunch) {
+              const neighborObj = fixedRooms.find(x => x.id === room.neighbor);
+              warnings.push({
+                type: "danger",
+                msg: `<strong>Choque comida vecinas:</strong> ${rA.person} (${room.name}) y ${rB.person} (${neighborObj.name}) a las <strong>${rA.lunch}</strong>.`
+              });
+            }
+          }
+        }
+      });
+
+      if (warnings.length === 0) {
+        panel.innerHTML = `<div class="warning-ok">✓ Todo en orden. Sin advertencias.</div>`;
+      } else {
+        panel.innerHTML = warnings
+          .map(w => `<div class="warning-item ${w.type}">${w.msg}</div>`)
+          .join("");
+      }
+    }
+
+    function generateSchedule() {
+      const err = document.getElementById("error-output");
+      err.innerText = "";
+
+      const superGuia = people.find(p => p.isSuper);
+      if (!superGuia) {
+        err.innerText = "Se necesita registrar a un Súper Guía.";
+        return;
+      }
+
+      const hasPlanetario = people.some(p => p.canPlanetario);
+      const hasPlasma = people.some(p => p.canPlasma);
+
+      if (!hasPlanetario || !hasPlasma) {
+        err.innerText = "Debes registrar al menos a una persona con Planetario y una con Plasma.";
+        return;
+      }
+
+      const totalPeople = people.length;
+      const hasSufficientStaff = totalPeople >= fixedRooms.length;
+
+      let roomsToAssign = [];
+      let staffPool = [];
+
+      if (hasSufficientStaff) {
+        superGuia.turno1 = "H-20";
+        superGuia.turno2 = "H-20";
+        superGuia.turno3 = "H-20";
+        superGuia.lunch = "1:30 PM";
+
+        roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
+        staffPool = people.filter(p => !p.isSuper);
+      } else {
+        roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
+        staffPool = [...people];
+      }
+
+      function getEligible(room, pool) {
+        return pool.filter(p => {
+          if (room.req === "planetario") return p.canPlanetario;
+          if (room.req === "plasma") return p.canPlasma;
+          return true;
+        });
+      }
+
+      const eligibleMap = new Map();
+      roomsToAssign.forEach(r => eligibleMap.set(r.id, getEligible(r, staffPool)));
+
+      function solveSingleShift(previousHistoryMap) {
+        const assignments = new Map();
+        const usedPersons = new Set();
+
+        const specialtyRooms = roomsToAssign.filter(r => r.req === "planetario" || r.req === "plasma");
+        const normalRooms = roomsToAssign.filter(r => r.req !== "planetario" && r.req !== "plasma");
+        const order = [...shuffle(specialtyRooms), ...shuffle(normalRooms)];
+
+        function backtrack(idx) {
+          if (idx === order.length || idx === staffPool.length) return true;
+          const room = order[idx];
+          const candidates = shuffle(eligibleMap.get(room.id) || []);
+
+          for (const person of candidates) {
+            if (!usedPersons.has(person)) {
+              const pastRooms = previousHistoryMap.get(person) || [];
+              if (!pastRooms.includes(room.id)) {
+                usedPersons.add(person);
+                assignments.set(person, room);
+
+                if (backtrack(idx + 1)) return true;
+
+                usedPersons.delete(person);
+                assignments.delete(person);
+              }
+            }
+          }
+          return false;
+        }
+
+        return backtrack(0) ? assignments : null;
+      }
+
+      let solution = null;
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const hist1 = new Map();
+        staffPool.forEach(p => hist1.set(p, []));
+        const t1 = solveSingleShift(hist1);
+        if (!t1) continue;
+
+        const hist2 = new Map();
+        staffPool.forEach(p => {
+          const r1 = t1.get(p);
+          hist2.set(p, r1 ? [r1.id] : []);
+        });
+        const t2 = solveSingleShift(hist2);
+        if (!t2) continue;
+
+        const hist3 = new Map();
+        staffPool.forEach(p => {
+          const r1 = t1.get(p);
+          const r2 = t2.get(p);
+          const seen = [];
+          if (r1) seen.push(r1.id);
+          if (r2) seen.push(r2.id);
+          hist3.set(p, seen);
+        });
+        const t3 = solveSingleShift(hist3);
+        if (!t3) continue;
+
+        solution = { t1, t2, t3 };
+        break;
+      }
+
+      if (!solution) {
+        err.innerText = "No se logró resolver la distribución aleatoria sin repetir salas. Intenta nuevamente.";
+        return;
+      }
+
+      const { t1, t2, t3 } = solution;
+
+      staffPool.forEach(person => {
+        const r1Obj = t1.get(person);
+        const r2Obj = t2.get(person);
+        const r3Obj = t3.get(person);
+
+        person.turno1 = r1Obj ? r1Obj.id : "";
+        person.turno2 = r2Obj ? r2Obj.id : "";
+        person.turno3 = r3Obj ? r3Obj.id : "";
+
+        if (r2Obj) {
+          person.lunch = r2Obj.defaultLunch;
+        }
+      });
+
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderRoomsFixed();
+      renderPeople();
+    });
+  </script>
+</body>
+</html>
