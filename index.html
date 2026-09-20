@@ -279,6 +279,23 @@
       width: 100%;
     }
 
+    .btn-excel {
+      background: #15803d;
+      color: #ffffff;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.25rem;
+      width: 100%;
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-excel:hover {
+      background: #166534;
+    }
+
     .schedule-layout {
       display: grid;
       grid-template-columns: 1fr;
@@ -393,11 +410,16 @@
     }
 
     .error-msg {
-      color: var(--danger);
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      border-radius: 0.5rem;
       font-size: 0.85rem;
-      text-align: center;
+      text-align: left;
       font-weight: 500;
-      padding: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      line-height: 1.4;
+      display: none;
     }
 
     .scroll-hint {
@@ -471,7 +493,7 @@
           <span class="scroll-hint">⇄ Desliza la tabla</span>
         </div>
         <div class="table-wrapper">
-          <table class="results-table">
+          <table class="results-table" id="table-schedule">
             <thead>
               <tr>
                 <th>Guías</th>
@@ -490,6 +512,10 @@
             </tbody>
           </table>
         </div>
+
+        <button class="btn-excel" onclick="exportToExcel()">
+          📥 Exportar a Excel (.xls)
+        </button>
       </section>
 
       <section class="card">
@@ -592,7 +618,8 @@
 
     function addPerson() {
       const err = document.getElementById("error-output");
-      err.innerText = "";
+      err.style.display = "none";
+      err.innerHTML = "";
       const nameInput = document.getElementById("person-name");
       const name = nameInput.value.trim();
       const isSuper = document.getElementById("chk-super").checked;
@@ -602,7 +629,8 @@
       if (!name) return;
 
       if (isSuper && people.some(p => p.isSuper)) {
-        err.innerText = "Error: Ya existe un Súper Guía registrado.";
+        err.innerHTML = "Error: Ya existe un Súper Guía registrado.";
+        err.style.display = "block";
         return;
       }
 
@@ -727,7 +755,9 @@
     }
 
     function clearTableAssignments() {
-      document.getElementById("error-output").innerText = "";
+      const err = document.getElementById("error-output");
+      err.style.display = "none";
+      err.innerHTML = "";
       people.forEach(p => {
         p.turno1 = "";
         p.turno2 = "";
@@ -773,7 +803,8 @@
 
         fixedRooms.forEach(room => {
           const count = assignedRooms.filter(ar => ar.room === room.id).length;
-          if (count === 0) {
+          
+          if (count === 0 && room.id !== "H-20") {
             warnings.push({
               type: "warning",
               msg: `<strong>Sala vacía:</strong> Nadie asignado a <strong>${room.name}</strong> en <em>${t.name}</em>.`
@@ -788,7 +819,6 @@
         });
       });
 
-      const isSufficientStaff = people.length >= fixedRooms.length;
       people.forEach(p => {
         const roomCounts = {};
         [p.turno1, p.turno2, p.turno3].forEach(r => {
@@ -797,7 +827,7 @@
 
         Object.keys(roomCounts).forEach(rId => {
           if (roomCounts[rId] > 1) {
-            if (p.isSuper && rId === "H-20" && isSufficientStaff) return;
+            if (p.isSuper && rId === "H-20") return;
 
             const rObj = fixedRooms.find(r => r.id === rId);
             const rName = rObj ? rObj.name : rId;
@@ -845,141 +875,320 @@
       }
     }
 
+    function showError(html) {
+      const err = document.getElementById("error-output");
+      err.innerHTML = html;
+      err.style.display = "block";
+    }
+
     function generateSchedule() {
       const err = document.getElementById("error-output");
-      err.innerText = "";
+      err.style.display = "none";
+      err.innerHTML = "";
+
+      if (people.length === 0) {
+        showError("<strong>Error:</strong> No has registrado a ninguna persona.");
+        return;
+      }
 
       const superGuia = people.find(p => p.isSuper);
       if (!superGuia) {
-        err.innerText = "Se necesita registrar a un Súper Guía.";
+        showError("<strong>Error:</strong> Se necesita registrar obligatoriamente a 1 Súper Guía.");
         return;
       }
 
-      const hasPlanetario = people.some(p => p.canPlanetario);
-      const hasPlasma = people.some(p => p.canPlasma);
+      const generalStaff = people.filter(p => !p.isSuper);
+      const isSufficientStaff = people.length >= fixedRooms.length; // >= 7
 
-      if (!hasPlanetario || !hasPlasma) {
-        err.innerText = "Debes registrar al menos a una persona con Planetario y una con Plasma.";
+      const allPlanetarios = people.filter(p => p.canPlanetario);
+      const allPlasmas = people.filter(p => p.canPlasma);
+
+      if (allPlanetarios.length === 0) {
+        showError("<strong>Falta personal:</strong> Nadie puede dar <strong>Planetario (H-21)</strong>.");
         return;
       }
 
-      const totalPeople = people.length;
-      const hasSufficientStaff = totalPeople >= fixedRooms.length;
-
-      let roomsToAssign = [];
-      let staffPool = [];
-
-      if (hasSufficientStaff) {
-        superGuia.turno1 = "H-20";
-        superGuia.turno2 = "H-20";
-        superGuia.turno3 = "H-20";
-        superGuia.lunch = "1:30 PM";
-
-        roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
-        staffPool = people.filter(p => !p.isSuper);
-      } else {
-        roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
-        staffPool = [...people];
+      if (allPlasmas.length === 0) {
+        showError("<strong>Falta personal:</strong> Nadie puede dar <strong>Plasma (H-27)</strong>.");
+        return;
       }
 
-      function getEligible(room, pool) {
-        return pool.filter(p => {
-          if (room.req === "planetario") return p.canPlanetario;
-          if (room.req === "plasma") return p.canPlasma;
-          return true;
-        });
-      }
+      const roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
 
-      const eligibleMap = new Map();
-      roomsToAssign.forEach(r => eligibleMap.set(r.id, getEligible(r, staffPool)));
+      // Verificamos si en guías normales faltan para rotar 3 turnos
+      const genPlan = generalStaff.filter(p => p.canPlanetario);
+      const genPla = generalStaff.filter(p => p.canPlasma);
+      const superCanPlan = superGuia.canPlanetario;
+      const superCanPla = superGuia.canPlasma;
 
-      function solveSingleShift(previousHistoryMap) {
-        const assignments = new Map();
-        const usedPersons = new Set();
+      // Resuelve la asignación completa de los 3 turnos mediante Backtracking puro
+      // enforceNoRepeatGeneral: si es true, ningún guía general puede repetir sala jamás.
+      function solveCompleteSchedule(enforceNoRepeatGeneral) {
+        const shifts = [
+          new Map(), // turno 1
+          new Map(), // turno 2
+          new Map()  // turno 3
+        ];
 
-        const specialtyRooms = roomsToAssign.filter(r => r.req === "planetario" || r.req === "plasma");
-        const normalRooms = roomsToAssign.filter(r => r.req !== "planetario" && r.req !== "plasma");
-        const order = [...shuffle(specialtyRooms), ...shuffle(normalRooms)];
+        const history = new Map();
+        people.forEach(p => history.set(p.id, []));
 
-        function backtrack(idx) {
-          if (idx === order.length || idx === staffPool.length) return true;
-          const room = order[idx];
-          const candidates = shuffle(eligibleMap.get(room.id) || []);
+        // Determina para cada turno si el Súper Guía apoya en Planetario o Plasma
+        let superRolePerShift = ["H-20", "H-20", "H-20"];
 
-          for (const person of candidates) {
-            if (!usedPersons.has(person)) {
-              const pastRooms = previousHistoryMap.get(person) || [];
-              if (!pastRooms.includes(room.id)) {
-                usedPersons.add(person);
-                assignments.set(person, room);
-
-                if (backtrack(idx + 1)) return true;
-
-                usedPersons.delete(person);
-                assignments.delete(person);
-              }
-            }
+        if (isSufficientStaff) {
+          // Si faltan guías normales para cubrir los 3 turnos, asignamos al Súper Guía a esa sala técnica
+          if (genPla.length < 3 && superCanPla) {
+            superRolePerShift[1] = "H-27"; // Apoya en el turno de la tarde/comida
           }
-          return false;
+          if (genPlan.length < 3 && superCanPlan && superRolePerShift[0] === "H-20") {
+            superRolePerShift[0] = "H-21"; // Apoya en el turno matutino
+          }
         }
 
-        return backtrack(0) ? assignments : null;
+        function canAssign(person, room, shiftIdx) {
+          // Exclusividad estricta de H-20
+          if (room.id === "H-20") return person.isSuper;
+
+          // Si hay personal suficiente, el Súper Guía NUNCA puede tomar salas generales
+          if (isSufficientStaff && person.isSuper) {
+            if (room.req === "general") return false;
+            if (room.id === "H-21" && !superCanPlan) return false;
+            if (room.id === "H-27" && !superCanPla) return false;
+          }
+
+          // Validación de especialidades
+          if (room.req === "planetario" && !person.canPlanetario) return false;
+          if (room.req === "plasma" && !person.canPlasma) return false;
+
+          const past = history.get(person.id);
+          const alreadyInRoom = past.includes(room.id);
+
+          if (alreadyInRoom) {
+            // El Súper Guía puede repetir H-20
+            if (person.isSuper && room.id === "H-20") return true;
+
+            // Si se exige no repetir en generales, está terminantemente prohibido repetir
+            if (enforceNoRepeatGeneral) {
+              // Solo se permite repetir en Planetario/Plasma si no hay suficientes personas capacitadas
+              const isTech = room.req === "planetario" || room.req === "plasma";
+              const techCount = room.req === "planetario" ? allPlanetarios.length : allPlasmas.length;
+              if (isTech && techCount < 3) {
+                return true;
+              }
+              return false;
+            }
+          }
+
+          return true;
+        }
+
+        // Resolver turno por turno recursivamente
+        function backtrackShift(shiftIdx) {
+          if (shiftIdx === 3) return true; // Se resolvieron los 3 turnos exitosamente
+
+          const currentMap = shifts[shiftIdx];
+          const usedInShift = new Set();
+
+          // Orden de salas: Planetario y Plasma primero, luego las 4 generales
+          const roomsOrder = shuffle([
+            fixedRooms.find(r => r.id === "H-21"),
+            fixedRooms.find(r => r.id === "H-27"),
+            ...shuffle(fixedRooms.filter(r => r.req === "general"))
+          ]);
+
+          // Si hay suficiente personal y el Súper Guía tiene asignado H-20 en este turno, fijarlo
+          if (isSufficientStaff && superRolePerShift[shiftIdx] === "H-20") {
+            const h20 = fixedRooms.find(r => r.id === "H-20");
+            currentMap.set(superGuia, h20);
+            usedInShift.add(superGuia);
+          }
+
+          function backtrackRoom(roomIdx) {
+            if (roomIdx === roomsOrder.length) {
+              // Si el Súper Guía aún no fue asignado en este turno, debe asignarse a H-20
+              if (!usedInShift.has(superGuia)) {
+                const h20 = fixedRooms.find(r => r.id === "H-20");
+                currentMap.set(superGuia, h20);
+                usedInShift.add(superGuia);
+                history.get(superGuia.id).push("H-20");
+
+                const nextShiftOk = backtrackShift(shiftIdx + 1);
+                if (nextShiftOk) return true;
+
+                history.get(superGuia.id).pop();
+                currentMap.delete(superGuia);
+                usedInShift.delete(superGuia);
+                return false;
+              }
+
+              return backtrackShift(shiftIdx + 1);
+            }
+
+            const room = roomsOrder[roomIdx];
+            
+            // Si el Súper Guía fue asignado específicamente a esta sala técnica en este turno
+            if (isSufficientStaff && !usedInShift.has(superGuia) && superRolePerShift[shiftIdx] === room.id) {
+              currentMap.set(superGuia, room);
+              usedInShift.add(superGuia);
+              history.get(superGuia.id).push(room.id);
+
+              if (backtrackRoom(roomIdx + 1)) return true;
+
+              history.get(superGuia.id).pop();
+              currentMap.delete(superGuia);
+              usedInShift.delete(superGuia);
+              return false;
+            }
+
+            // Candidatos disponibles
+            const candidates = shuffle(people.filter(p => !usedInShift.has(p) && canAssign(p, room, shiftIdx)));
+
+            for (const person of candidates) {
+              currentMap.set(person, room);
+              usedInShift.add(person);
+              history.get(person.id).push(room.id);
+
+              if (backtrackRoom(roomIdx + 1)) return true;
+
+              history.get(person.id).pop();
+              currentMap.delete(person);
+              usedInShift.delete(person);
+            }
+
+            return false;
+          }
+
+          return backtrackRoom(0);
+        }
+
+        const success = backtrackShift(0);
+        return success ? shifts : null;
       }
 
-      let solution = null;
-      for (let attempt = 0; attempt < 60; attempt++) {
-        const hist1 = new Map();
-        staffPool.forEach(p => hist1.set(p, []));
-        const t1 = solveSingleShift(hist1);
-        if (!t1) continue;
-
-        const hist2 = new Map();
-        staffPool.forEach(p => {
-          const r1 = t1.get(p);
-          hist2.set(p, r1 ? [r1.id] : []);
-        });
-        const t2 = solveSingleShift(hist2);
-        if (!t2) continue;
-
-        const hist3 = new Map();
-        staffPool.forEach(p => {
-          const r1 = t1.get(p);
-          const r2 = t2.get(p);
-          const seen = [];
-          if (r1) seen.push(r1.id);
-          if (r2) seen.push(r2.id);
-          hist3.set(p, seen);
-        });
-        const t3 = solveSingleShift(hist3);
-        if (!t3) continue;
-
-        solution = { t1, t2, t3 };
-        break;
+      // 1er intento: Con garantía estricta de CERO repeticiones en salas generales
+      let result = null;
+      for (let i = 0; i < 60; i++) {
+        result = solveCompleteSchedule(true);
+        if (result) break;
       }
 
-      if (!solution) {
-        err.innerText = "No se logró resolver la distribución aleatoria sin repetir salas. Intenta nuevamente.";
+      // 2do intento: Si falta personal general (<7), relajar ligeramente
+      if (!result && !isSufficientStaff) {
+        for (let i = 0; i < 40; i++) {
+          result = solveCompleteSchedule(false);
+          if (result) break;
+        }
+      }
+
+      if (!result) {
+        showError(
+          `<strong>No se encontró combinación sin repetición:</strong><br>` +
+          `Verifica que haya suficiente personal capacitado o haz clic nuevamente en Generar Horario.`
+        );
         return;
       }
 
-      const { t1, t2, t3 } = solution;
+      const [t1, t2, t3] = result;
 
-      staffPool.forEach(person => {
-        const r1Obj = t1.get(person);
-        const r2Obj = t2.get(person);
-        const r3Obj = t3.get(person);
+      // Volcar los turnos a las personas
+      people.forEach(person => {
+        const r1 = t1.get(person);
+        const r2 = t2.get(person);
+        const r3 = t3.get(person);
 
-        person.turno1 = r1Obj ? r1Obj.id : "";
-        person.turno2 = r2Obj ? r2Obj.id : "";
-        person.turno3 = r3Obj ? r3Obj.id : "";
+        person.turno1 = r1 ? r1.id : "";
+        person.turno2 = r2 ? r2.id : "";
+        person.turno3 = r3 ? r3.id : "";
 
-        if (r2Obj) {
-          person.lunch = r2Obj.defaultLunch;
+        if (r2) {
+          person.lunch = r2.defaultLunch;
+        } else {
+          person.lunch = "1:30 PM";
         }
       });
 
       renderScheduleTable();
       validateSchedule();
+    }
+
+    function exportToExcel() {
+      if (people.length === 0) {
+        alert("Agrega personal y genera el horario antes de exportar.");
+        return;
+      }
+
+      const findRoomName = (id) => {
+        if (!id) return "Sin asignar";
+        const r = fixedRooms.find(x => x.id === id);
+        return r ? r.name : id;
+      };
+
+      let rowsHtml = "";
+      people.forEach(p => {
+        const r1 = findRoomName(p.turno1);
+        const r2 = findRoomName(p.turno2);
+        const r3 = findRoomName(p.turno3);
+        const lunch = p.lunch || "1:30 PM";
+
+        rowsHtml += `
+          <tr>
+            <td style="border:1px solid #999; padding:5px;">${p.name} ${p.isSuper ? '(Súper Guía)' : ''}</td>
+            <td style="border:1px solid #999; padding:5px;">${r1}</td>
+            <td style="border:1px solid #999; padding:5px;">${r2}</td>
+            <td style="border:1px solid #999; padding:5px;">${r3}</td>
+            <td style="border:1px solid #999; padding:5px; font-weight:bold; background-color:#f2f2f2;">${lunch}</td>
+          </tr>
+        `;
+      });
+
+      const excelTemplate = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Distribución de Horarios</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+          </head>
+          <body>
+            <table style="border-collapse:collapse; font-family:Arial, sans-serif;">
+              <thead>
+                <tr style="background-color:#1e293b; color:#ffffff; font-weight:bold;">
+                  <th style="border:1px solid #999; padding:8px;">Guías</th>
+                  <th style="border:1px solid #999; padding:8px;">10:00 - 12:30</th>
+                  <th style="border:1px solid #999; padding:8px;">12:30 - 3:00</th>
+                  <th style="border:1px solid #999; padding:8px;">3:00 - 5:00</th>
+                  <th style="border:1px solid #999; padding:8px;">Hora Comida</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `Turnos_Salas_${new Date().toISOString().slice(0, 10)}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
 
     window.addEventListener("DOMContentLoaded", () => {
