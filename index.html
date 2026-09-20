@@ -279,8 +279,8 @@
       width: 100%;
     }
 
-    .btn-excel {
-      background: #15803d;
+    .btn-export {
+      background: #0284c7;
       color: #ffffff;
       font-size: 0.95rem;
       padding: 0.75rem 1.25rem;
@@ -292,8 +292,8 @@
       gap: 0.5rem;
     }
 
-    .btn-excel:hover {
-      background: #166534;
+    .btn-export:hover {
+      background: #0369a1;
     }
 
     .schedule-layout {
@@ -435,6 +435,144 @@
         display: none;
       }
     }
+
+    /* Modal de exportación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 17, 32, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-box h3 {
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .modal-box p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .btn-format-excel {
+      background: #15803d;
+      color: #ffffff;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-format-excel:hover {
+      background: #166534;
+    }
+
+    .btn-format-pdf {
+      background: #dc2626;
+      color: #ffffff;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-format-pdf:hover {
+      background: #b91c1c;
+    }
+
+    .btn-modal-cancel {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 0.6rem;
+      border-radius: 0.5rem;
+    }
+
+    .btn-modal-cancel:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    /* Estilos de impresión para PDF */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0;
+      }
+      .grid-forms, .actions, #error-output, .warnings-panel, .scroll-hint, .btn-export, .modal-overlay, .card h2 {
+        display: none !important;
+      }
+      .schedule-layout {
+        display: block !important;
+      }
+      .card {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      .table-wrapper {
+        border: none !important;
+        overflow: visible !important;
+      }
+      .results-table {
+        min-width: 100% !important;
+        border: 1px solid #000 !important;
+      }
+      .results-table th, .results-table td {
+        border: 1px solid #333 !important;
+        color: #000 !important;
+        padding: 6px 8px !important;
+      }
+      .results-table th {
+        background: #e2e8f0 !important;
+      }
+      .results-table select {
+        display: none !important;
+      }
+      .print-val {
+        display: inline !important;
+        font-weight: 500;
+      }
+    }
+
+    .print-val {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -513,8 +651,8 @@
           </table>
         </div>
 
-        <button class="btn-excel" onclick="exportToExcel()">
-          📥 Exportar a Excel (.xls)
+        <button class="btn-export" onclick="openExportModal()">
+          📤 Exportar Horario
         </button>
       </section>
 
@@ -524,6 +662,26 @@
           <div class="warning-ok">Sin advertencias activas.</div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Modal para seleccionar formato de exportación -->
+  <div class="modal-overlay" id="export-modal" onclick="closeExportModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3>Exportar Horario</h3>
+      <p>Selecciona el formato en el que deseas descargar o guardar la distribución:</p>
+      
+      <div class="modal-actions">
+        <button class="btn-format-excel" onclick="triggerExcelExport()">
+          📊 Descargar en Excel (.xls)
+        </button>
+        <button class="btn-format-pdf" onclick="triggerPdfExport()">
+          📄 Guardar en PDF / Imprimir
+        </button>
+        <button class="btn-modal-cancel" onclick="closeExportModal()">
+          Cancelar
+        </button>
+      </div>
     </div>
   </div>
 
@@ -680,6 +838,12 @@
       return html;
     }
 
+    function getRoomDisplayName(roomId) {
+      if (!roomId) return "-- Sin asignar --";
+      const r = fixedRooms.find(x => x.id === roomId);
+      return r ? r.name : roomId;
+    }
+
     function renderScheduleTable() {
       const tbody = document.getElementById("results-body");
 
@@ -708,22 +872,26 @@
               <select class="table-select" onchange="updateAssignment('${person.id}', 'turno1', this.value)">
                 ${getRoomSelectOptions(person, person.turno1)}
               </select>
+              <span class="print-val">${getRoomDisplayName(person.turno1)}</span>
             </td>
             <td>
               <select class="table-select" onchange="updateAssignment('${person.id}', 'turno2', this.value)">
                 ${getRoomSelectOptions(person, person.turno2)}
               </select>
+              <span class="print-val">${getRoomDisplayName(person.turno2)}</span>
             </td>
             <td>
               <select class="table-select" onchange="updateAssignment('${person.id}', 'turno3', this.value)">
                 ${getRoomSelectOptions(person, person.turno3)}
               </select>
+              <span class="print-val">${getRoomDisplayName(person.turno3)}</span>
             </td>
             <td>
               <select class="table-select select-lunch ${lunchColorClass}" onchange="updateLunch('${person.id}', this.value)">
                 <option value="1:30 PM" ${lunch130Sel}>1:30 PM</option>
                 <option value="2:00 PM" ${lunch200Sel}>2:00 PM</option>
               </select>
+              <span class="print-val">${person.lunch}</span>
             </td>
           </tr>
         `;
@@ -898,7 +1066,7 @@
       }
 
       const generalStaff = people.filter(p => !p.isSuper);
-      const isSufficientStaff = people.length >= fixedRooms.length; // >= 7
+      const isSufficientStaff = people.length >= fixedRooms.length;
 
       const allPlanetarios = people.filter(p => p.canPlanetario);
       const allPlasmas = people.filter(p => p.canPlasma);
@@ -913,51 +1081,36 @@
         return;
       }
 
-      const roomsToAssign = fixedRooms.filter(r => r.id !== "H-20");
-
-      // Verificamos si en guías normales faltan para rotar 3 turnos
       const genPlan = generalStaff.filter(p => p.canPlanetario);
       const genPla = generalStaff.filter(p => p.canPlasma);
       const superCanPlan = superGuia.canPlanetario;
       const superCanPla = superGuia.canPlasma;
 
-      // Resuelve la asignación completa de los 3 turnos mediante Backtracking puro
-      // enforceNoRepeatGeneral: si es true, ningún guía general puede repetir sala jamás.
       function solveCompleteSchedule(enforceNoRepeatGeneral) {
-        const shifts = [
-          new Map(), // turno 1
-          new Map(), // turno 2
-          new Map()  // turno 3
-        ];
-
+        const shifts = [new Map(), new Map(), new Map()];
         const history = new Map();
         people.forEach(p => history.set(p.id, []));
 
-        // Determina para cada turno si el Súper Guía apoya en Planetario o Plasma
         let superRolePerShift = ["H-20", "H-20", "H-20"];
 
         if (isSufficientStaff) {
-          // Si faltan guías normales para cubrir los 3 turnos, asignamos al Súper Guía a esa sala técnica
           if (genPla.length < 3 && superCanPla) {
-            superRolePerShift[1] = "H-27"; // Apoya en el turno de la tarde/comida
+            superRolePerShift[1] = "H-27";
           }
           if (genPlan.length < 3 && superCanPlan && superRolePerShift[0] === "H-20") {
-            superRolePerShift[0] = "H-21"; // Apoya en el turno matutino
+            superRolePerShift[0] = "H-21";
           }
         }
 
         function canAssign(person, room, shiftIdx) {
-          // Exclusividad estricta de H-20
           if (room.id === "H-20") return person.isSuper;
 
-          // Si hay personal suficiente, el Súper Guía NUNCA puede tomar salas generales
           if (isSufficientStaff && person.isSuper) {
             if (room.req === "general") return false;
             if (room.id === "H-21" && !superCanPlan) return false;
             if (room.id === "H-27" && !superCanPla) return false;
           }
 
-          // Validación de especialidades
           if (room.req === "planetario" && !person.canPlanetario) return false;
           if (room.req === "plasma" && !person.canPlasma) return false;
 
@@ -965,17 +1118,12 @@
           const alreadyInRoom = past.includes(room.id);
 
           if (alreadyInRoom) {
-            // El Súper Guía puede repetir H-20
             if (person.isSuper && room.id === "H-20") return true;
 
-            // Si se exige no repetir en generales, está terminantemente prohibido repetir
             if (enforceNoRepeatGeneral) {
-              // Solo se permite repetir en Planetario/Plasma si no hay suficientes personas capacitadas
               const isTech = room.req === "planetario" || room.req === "plasma";
               const techCount = room.req === "planetario" ? allPlanetarios.length : allPlasmas.length;
-              if (isTech && techCount < 3) {
-                return true;
-              }
+              if (isTech && techCount < 3) return true;
               return false;
             }
           }
@@ -983,21 +1131,18 @@
           return true;
         }
 
-        // Resolver turno por turno recursivamente
         function backtrackShift(shiftIdx) {
-          if (shiftIdx === 3) return true; // Se resolvieron los 3 turnos exitosamente
+          if (shiftIdx === 3) return true;
 
           const currentMap = shifts[shiftIdx];
           const usedInShift = new Set();
 
-          // Orden de salas: Planetario y Plasma primero, luego las 4 generales
           const roomsOrder = shuffle([
             fixedRooms.find(r => r.id === "H-21"),
             fixedRooms.find(r => r.id === "H-27"),
             ...shuffle(fixedRooms.filter(r => r.req === "general"))
           ]);
 
-          // Si hay suficiente personal y el Súper Guía tiene asignado H-20 en este turno, fijarlo
           if (isSufficientStaff && superRolePerShift[shiftIdx] === "H-20") {
             const h20 = fixedRooms.find(r => r.id === "H-20");
             currentMap.set(superGuia, h20);
@@ -1006,7 +1151,6 @@
 
           function backtrackRoom(roomIdx) {
             if (roomIdx === roomsOrder.length) {
-              // Si el Súper Guía aún no fue asignado en este turno, debe asignarse a H-20
               if (!usedInShift.has(superGuia)) {
                 const h20 = fixedRooms.find(r => r.id === "H-20");
                 currentMap.set(superGuia, h20);
@@ -1027,7 +1171,6 @@
 
             const room = roomsOrder[roomIdx];
             
-            // Si el Súper Guía fue asignado específicamente a esta sala técnica en este turno
             if (isSufficientStaff && !usedInShift.has(superGuia) && superRolePerShift[shiftIdx] === room.id) {
               currentMap.set(superGuia, room);
               usedInShift.add(superGuia);
@@ -1041,7 +1184,6 @@
               return false;
             }
 
-            // Candidatos disponibles
             const candidates = shuffle(people.filter(p => !usedInShift.has(p) && canAssign(p, room, shiftIdx)));
 
             for (const person of candidates) {
@@ -1066,14 +1208,12 @@
         return success ? shifts : null;
       }
 
-      // 1er intento: Con garantía estricta de CERO repeticiones en salas generales
       let result = null;
       for (let i = 0; i < 60; i++) {
         result = solveCompleteSchedule(true);
         if (result) break;
       }
 
-      // 2do intento: Si falta personal general (<7), relajar ligeramente
       if (!result && !isSufficientStaff) {
         for (let i = 0; i < 40; i++) {
           result = solveCompleteSchedule(false);
@@ -1091,7 +1231,6 @@
 
       const [t1, t2, t3] = result;
 
-      // Volcar los turnos a las personas
       people.forEach(person => {
         const r1 = t1.get(person);
         const r2 = t2.get(person);
@@ -1112,11 +1251,22 @@
       validateSchedule();
     }
 
-    function exportToExcel() {
+    // Modal de Exportación
+    function openExportModal() {
       if (people.length === 0) {
         alert("Agrega personal y genera el horario antes de exportar.");
         return;
       }
+      document.getElementById("export-modal").style.display = "flex";
+    }
+
+    function closeExportModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById("export-modal").style.display = "none";
+    }
+
+    function triggerExcelExport() {
+      closeExportModal();
 
       const findRoomName = (id) => {
         if (!id) return "Sin asignar";
@@ -1189,6 +1339,11 @@
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    }
+
+    function triggerPdfExport() {
+      closeExportModal();
+      window.print();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
