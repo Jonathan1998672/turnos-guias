@@ -1,0 +1,19 @@
+# --- Núcleo de la API ---
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.32,<1.0
+pydantic>=2.9,<3.0
+pydantic-settings>=2.6,<3.0
+
+# --- Base de datos (Supabase / PostgreSQL) ---
+sqlalchemy>=2.0.36,<2.1
+psycopg[binary]>=3.2,<4.0
+alembic>=1.14,<2.0
+
+# --- Exportación ---
+openpyxl>=3.1.5,<4.0     # .xlsx
+reportlab>=4.2,<5.0      # .pdf
+pymupdf>=1.24,<2.0       # rasteriza el PDF a .png / .jpg
+pillow>=11.0,<12.0       # utilidades de imagen
+
+# --- Utilidades ---
+python-dotenv>=1.0,<2.0

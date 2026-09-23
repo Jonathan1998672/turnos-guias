@@ -1,0 +1,42 @@
+# --- Python / backend ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+requirements.lock.txt
+
+# --- Node / frontend ---
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# --- Entorno ---
+.env
+.env.*
+!.env.example
+
+# --- Editores y sistema operativo ---
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Salidas de la app ---
+exports/
+*.xlsx
+*.pdf
+
+# --- Bases de datos locales de prueba ---
+*.db
+*.sqlite3
