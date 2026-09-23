@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Los tokens del prototipo original, ahora como tema de Tailwind.
+   Cada --color-X genera utilidades bg-X, text-X, border-X, etc. */
+@theme {
+  --color-fondo: #0b1120;
+  --color-hondo: #0f172a;
+  --color-tarjeta: #1e293b;
+  --color-borde: #334155;
+  --color-texto: #f8fafc;
+  --color-tenue: #94a3b8;
+  --color-primario: #38bdf8;
+  --color-primario-fuerte: #0284c7;
+  --color-peligro: #ef4444;
+  --color-alerta: #f59e0b;
+  --color-acento: #6366f1;
+  --color-oro: #facc15;
+  --color-exito: #10b981;
+}
+
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Barras de scroll discretas dentro de las tarjetas oscuras. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-borde) transparent;
+}

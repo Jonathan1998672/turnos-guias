@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Asignación de Turnos y Salas</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --accent: #6366f1;
+      --gold: #facc15;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 0.75rem 0.5rem 2rem 0.5rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    header {
+      padding: 0.5rem 0.25rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.2;
+    }
+
+    .grid-forms {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        padding: 2rem 1rem;
+      }
+      .container {
+        gap: 1.5rem;
+      }
+      header h1 {
+        font-size: 1.75rem;
+      }
+      .grid-forms {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+      font-weight: 600;
+    }
+
+    .input-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      outline: none;
+      width: 100%;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background: #0f172a;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.2rem 0;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--primary);
+      width: 18px;
+      height: 18px;
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 0.5rem;
+      border: none;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      font-size: 0.9rem;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.2s, transform 0.05s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0f172a;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      padding: 0.4rem 0.65rem;
+      font-size: 1rem;
+      line-height: 1;
+      border-radius: 0.4rem;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 0.15rem;
+    }
+
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0.85rem;
+      font-style: italic;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      gap: 0.5rem;
+    }
+
+    .tags-container {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-left: 0.35rem;
+    }
+
+    .tag {
+      background: var(--border);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .tag-super {
+      background: rgba(250, 204, 21, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+    }
+
+    .tag-planetario {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+    }
+
+    .tag-plasma {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-top: 0.25rem;
+    }
+
+    @media (min-width: 640px) {
+      .actions {
+        flex-direction: row;
+        justify-content: center;
+      }
+      .btn-generate, .btn-clear {
+        width: auto;
+      }
+    }
+
+    .btn-generate {
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.95rem;
+      padding: 0.8rem 1.5rem;
+      width: 100%;
+    }
+
+    .btn-generate:hover {
+      background: #4f46e5;
+    }
+
+    .btn-clear {
+      background: var(--border);
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.75rem 1.25rem;
+      width: 100%;
+    }
+
+    .btn-export {
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 0.95rem;
+      padding: 0.75rem 1.25rem;
+      width: 100%;
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-export:hover {
+      background: #0369a1;
+    }
+
+    .schedule-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 1024px) {
+      .schedule-layout {
+        grid-template-columns: 2.2fr 1fr;
+        gap: 1.5rem;
+      }
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .results-table {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .results-table th, .results-table td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.5rem;
+      text-align: left;
+    }
+
+    .results-table th {
+      background: #111c44;
+      color: var(--primary);
+      white-space: nowrap;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .results-table tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .table-select {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.4rem;
+      border-radius: 0.4rem;
+      font-size: 0.8rem;
+      width: 100%;
+      outline: none;
+    }
+
+    .table-select:focus {
+      border-color: var(--primary);
+    }
+
+    .table-select.select-lunch {
+      font-weight: 600;
+      min-width: 90px;
+    }
+
+    .table-select.lunch-opt-130 {
+      border-color: #f59e0b;
+      color: #fef08a;
+    }
+
+    .table-select.lunch-opt-200 {
+      border-color: #3b82f6;
+      color: #bfdbfe;
+    }
+
+    .warnings-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .warning-item {
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 3px solid var(--warning);
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.35rem;
+      font-size: 0.78rem;
+      color: #fef3c7;
+      line-height: 1.35;
+    }
+
+    .warning-item.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-left-color: var(--danger);
+      color: #fee2e2;
+    }
+
+    .warning-ok {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 3px solid var(--success);
+      padding: 0.65rem;
+      border-radius: 0.35rem;
+      font-size: 0.8rem;
+      color: #a7f3d0;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .error-msg {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      text-align: left;
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .scroll-hint {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: -0.35rem;
+      font-style: italic;
+    }
+
+    @media (min-width: 768px) {
+      .scroll-hint {
+        display: none;
+      }
+    }
+
+    /* Modal de exportación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 17, 32, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-box h3 {
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .modal-box p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .btn-format-excel {
+      background: #15803d;
+      color: #ffffff;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-format-excel:hover {
+      background: #166534;
+    }
+
+    .btn-format-pdf {
+      background: #dc2626;
+      color: #ffffff;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-format-pdf:hover {
+      background: #b91c1c;
+    }
+
+    .btn-modal-cancel {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 0.6rem;
+      border-radius: 0.5rem;
+    }
+
+    .btn-modal-cancel:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    /* Estilos de impresión para PDF */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0;
+      }
+      .grid-forms, .actions, #error-output, .warnings-panel, .scroll-hint, .btn-export, .modal-overlay, .card h2 {
+        display: none !important;
+      }
+      .schedule-layout {
+        display: block !important;
+      }
+      .card {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      .table-wrapper {
+        border: none !important;
+        overflow: visible !important;
+      }
+      .results-table {
+        min-width: 100% !important;
+        border: 1px solid #000 !important;
+      }
+      .results-table th, .results-table td {
+        border: 1px solid #333 !important;
+        color: #000 !important;
+        padding: 6px 8px !important;
+      }
+      .results-table th {
+        background: #e2e8f0 !important;
+      }
+      .results-table select {
+        display: none !important;
+      }
+      .print-val {
+        display: inline !important;
+        font-weight: 500;
+      }
+    }
+
+    .print-val {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Gestor de Turnos y Salas</h1>
+    </header>
+
+    <div class="grid-forms">
+      <section class="card">
+        <h2>Registrar Personal</h2>
+        <div class="input-row">
+          <input type="text" id="person-name" placeholder="Nombre completo" autocomplete="off" />
+          
+          <div class="checkbox-group">
+            <label class="checkbox-label" id="label-super">
+              <input type="checkbox" id="chk-super" />
+              Súper Guía
+            </label>
+            <label class="checkbox-label" id="label-planetario">
+              <input type="checkbox" id="chk-planetario" />
+              Planetario
+            </label>
+            <label class="checkbox-label" id="label-plasma">
+              <input type="checkbox" id="chk-plasma" />
+              Plasma
+            </label>
+          </div>
+
+          <button class="btn-primary" onclick="addPerson()">+ Agregar Persona</button>
+        </div>
+
+        <div class="list" id="people-list">
+          <div class="empty-state">No hay personal registrado.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Salas</h2>
+        <div class="list" id="rooms-list"></div>
+      </section>
+    </div>
+
+    <div class="actions">
+      <button class="btn-generate" onclick="generateSchedule()">Generar Horario Aleatoriamente</button>
+      <button class="btn-clear" onclick="clearTableAssignments()">Limpiar Asignaciones</button>
+    </div>
+
+    <div id="error-output" class="error-msg"></div>
+
+    <div class="schedule-layout">
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <h2>Distribución del Día</h2>
+          <span class="scroll-hint">⇄ Desliza la tabla</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="results-table" id="table-schedule">
+            <thead>
+              <tr>
+                <th>Guías</th>
+                <th>10:00 - 12:30</th>
+                <th>12:30 - 3:00</th>
+                <th>3:00 - 5:00</th>
+                <th>Hora Comida</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 1.5rem;">
+                  Agrega personas en el panel superior para comenzar a asignar turnos.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button class="btn-export" onclick="openExportModal()">
+          📤 Exportar Horario
+        </button>
+      </section>
+
+      <section class="card">
+        <h2>Panel de Advertencias</h2>
+        <div class="warnings-panel" id="warnings-list">
+          <div class="warning-ok">Sin advertencias activas.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal para seleccionar formato de exportación -->
+  <div class="modal-overlay" id="export-modal" onclick="closeExportModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3>Exportar Horario</h3>
+      <p>Selecciona el formato en el que deseas descargar o guardar la distribución:</p>
+      
+      <div class="modal-actions">
+        <button class="btn-format-excel" onclick="triggerExcelExport()">
+          📊 Descargar en Excel (.xls)
+        </button>
+        <button class="btn-format-pdf" onclick="triggerPdfExport()">
+          📄 Guardar en PDF / Imprimir
+        </button>
+        <button class="btn-modal-cancel" onclick="closeExportModal()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fixedRooms = [
+      { id: "H-20", name: "H-20", req: "super", defaultLunch: "1:30 PM", neighbor: null },
+      { id: "H-21", name: "H-21 (Planetario)", req: "planetario", defaultLunch: "1:30 PM", neighbor: "H-27" },
+      { id: "H-27", name: "H-27 (Plasma)", req: "plasma", defaultLunch: "2:00 PM", neighbor: "H-21" },
+      { id: "H-22", name: "H-22", req: "general", defaultLunch: "1:30 PM", neighbor: "H-23" },
+      { id: "H-23", name: "H-23", req: "general", defaultLunch: "2:00 PM", neighbor: "H-22" },
+      { id: "H-25", name: "H-25", req: "general", defaultLunch: "1:30 PM", neighbor: "H-26" },
+      { id: "H-26", name: "H-26", req: "general", defaultLunch: "2:00 PM", neighbor: "H-25" }
+    ];
+
+    const people = [];
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function updateSuperGuiaCheckboxState() {
+      const chkSuper = document.getElementById("chk-super");
+      const labelSuper = document.getElementById("label-super");
+      const hasSuper = people.some(p => p.isSuper);
+
+      if (hasSuper) {
+        chkSuper.checked = false;
+        chkSuper.disabled = true;
+        labelSuper.style.opacity = "0.5";
+        labelSuper.title = "Ya hay un Súper Guía registrado";
+      } else {
+        chkSuper.disabled = false;
+        labelSuper.style.opacity = "1";
+        labelSuper.title = "";
+      }
+    }
+
+    function renderRoomsFixed() {
+      const list = document.getElementById("rooms-list");
+      list.innerHTML = "";
+      fixedRooms.forEach(r => {
+        let tag = `<span class="tag">Guía General</span>`;
+        if (r.req === "super") tag = `<span class="tag tag-super">Exclusiva Súper</span>`;
+        else if (r.req === "planetario") tag = `<span class="tag tag-planetario">Planetario</span>`;
+        else if (r.req === "plasma") tag = `<span class="tag tag-plasma">Plasma</span>`;
+
+        list.innerHTML += `
+          <div class="list-item">
+            <span><strong>${r.name}</strong></span>
+            ${tag}
+          </div>
+        `;
+      });
+    }
+
+    function renderPeople() {
+      const list = document.getElementById("people-list");
+      list.innerHTML = "";
+
+      if (people.length === 0) {
+        list.innerHTML = `<div class="empty-state">No hay personal registrado.</div>`;
+        updateSuperGuiaCheckboxState();
+        renderScheduleTable();
+        validateSchedule();
+        return;
+      }
+
+      people.forEach((p, idx) => {
+        let tagsHtml = "";
+        if (p.isSuper) tagsHtml += `<span class="tag tag-super">Súper Guía</span>`;
+        if (p.canPlanetario) tagsHtml += `<span class="tag tag-planetario">Planetario</span>`;
+        if (p.canPlasma) tagsHtml += `<span class="tag tag-plasma">Plasma</span>`;
+        if (!p.isSuper && !p.canPlanetario && !p.canPlasma) tagsHtml += `<span class="tag">Guía General</span>`;
+
+        list.innerHTML += `
+          <div class="list-item">
+            <span><strong>${p.name}</strong><span class="tags-container">${tagsHtml}</span></span>
+            <button class="btn-danger" onclick="removePerson(${idx})">✕</button>
+          </div>
+        `;
+      });
+
+      updateSuperGuiaCheckboxState();
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function addPerson() {
+      const err = document.getElementById("error-output");
+      err.style.display = "none";
+      err.innerHTML = "";
+      const nameInput = document.getElementById("person-name");
+      const name = nameInput.value.trim();
+      const isSuper = document.getElementById("chk-super").checked;
+      const canPlanetario = document.getElementById("chk-planetario").checked;
+      const canPlasma = document.getElementById("chk-plasma").checked;
+
+      if (!name) return;
+
+      if (isSuper && people.some(p => p.isSuper)) {
+        err.innerHTML = "Error: Ya existe un Súper Guía registrado.";
+        err.style.display = "block";
+        return;
+      }
+
+      people.push({
+        id: "p_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        name,
+        isSuper,
+        canPlanetario,
+        canPlasma,
+        turno1: isSuper ? "H-20" : "",
+        turno2: isSuper ? "H-20" : "",
+        turno3: isSuper ? "H-20" : "",
+        lunch: "1:30 PM"
+      });
+
+      nameInput.value = "";
+      document.getElementById("chk-super").checked = false;
+      document.getElementById("chk-planetario").checked = false;
+      document.getElementById("chk-plasma").checked = false;
+
+      renderPeople();
+    }
+
+    function removePerson(index) {
+      people.splice(index, 1);
+      renderPeople();
+    }
+
+    function getRoomSelectOptions(person, selectedVal) {
+      let html = `<option value="">-- Sin asignar --</option>`;
+      
+      fixedRooms.forEach(room => {
+        let allowed = true;
+
+        if (room.id === "H-20" && !person.isSuper) {
+          allowed = false;
+        }
+
+        if (room.req === "planetario" && !person.canPlanetario) allowed = false;
+        if (room.req === "plasma" && !person.canPlasma) allowed = false;
+
+        if (allowed) {
+          const sel = selectedVal === room.id ? "selected" : "";
+          html += `<option value="${room.id}" ${sel}>${room.name}</option>`;
+        }
+      });
+      return html;
+    }
+
+    function getRoomDisplayName(roomId) {
+      if (!roomId) return "-- Sin asignar --";
+      const r = fixedRooms.find(x => x.id === roomId);
+      return r ? r.name : roomId;
+    }
+
+    function renderScheduleTable() {
+      const tbody = document.getElementById("results-body");
+
+      if (people.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 1.5rem;">
+              Agrega personas en el panel superior para comenzar a asignar turnos.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = "";
+
+      people.forEach(person => {
+        const lunch130Sel = person.lunch === "1:30 PM" ? "selected" : "";
+        const lunch200Sel = person.lunch === "2:00 PM" ? "selected" : "";
+        const lunchColorClass = person.lunch === "1:30 PM" ? "lunch-opt-130" : "lunch-opt-200";
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${person.name}</strong> ${person.isSuper ? '<span class="tag tag-super">Súper</span>' : ''}</td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno1', this.value)">
+                ${getRoomSelectOptions(person, person.turno1)}
+              </select>
+              <span class="print-val">${getRoomDisplayName(person.turno1)}</span>
+            </td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno2', this.value)">
+                ${getRoomSelectOptions(person, person.turno2)}
+              </select>
+              <span class="print-val">${getRoomDisplayName(person.turno2)}</span>
+            </td>
+            <td>
+              <select class="table-select" onchange="updateAssignment('${person.id}', 'turno3', this.value)">
+                ${getRoomSelectOptions(person, person.turno3)}
+              </select>
+              <span class="print-val">${getRoomDisplayName(person.turno3)}</span>
+            </td>
+            <td>
+              <select class="table-select select-lunch ${lunchColorClass}" onchange="updateLunch('${person.id}', this.value)">
+                <option value="1:30 PM" ${lunch130Sel}>1:30 PM</option>
+                <option value="2:00 PM" ${lunch200Sel}>2:00 PM</option>
+              </select>
+              <span class="print-val">${person.lunch}</span>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function updateAssignment(personId, turnKey, value) {
+      const person = people.find(p => p.id === personId);
+      if (!person) return;
+      person[turnKey] = value;
+
+      if (turnKey === "turno2" && value) {
+        const roomObj = fixedRooms.find(r => r.id === value);
+        if (roomObj) {
+          person.lunch = roomObj.defaultLunch;
+        }
+      }
+
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function updateLunch(personId, value) {
+      const person = people.find(p => p.id === personId);
+      if (!person) return;
+      person.lunch = value;
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function clearTableAssignments() {
+      const err = document.getElementById("error-output");
+      err.style.display = "none";
+      err.innerHTML = "";
+      people.forEach(p => {
+        p.turno1 = "";
+        p.turno2 = "";
+        p.turno3 = "";
+        p.lunch = "1:30 PM";
+      });
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    function validateSchedule() {
+      const panel = document.getElementById("warnings-list");
+      if (people.length === 0) {
+        panel.innerHTML = `<div class="warning-ok">Sin registros para validar.</div>`;
+        return;
+      }
+
+      const warnings = [];
+      const turns = [
+        { key: "turno1", name: "10:00 - 12:30" },
+        { key: "turno2", name: "12:30 - 3:00" },
+        { key: "turno3", name: "3:00 - 5:00" }
+      ];
+
+      people.forEach(p => {
+        if (!p.isSuper) {
+          [p.turno1, p.turno2, p.turno3].forEach((r, idx) => {
+            if (r === "H-20") {
+              warnings.push({
+                type: "danger",
+                msg: `<strong>Violación de rol:</strong> <strong>${p.name}</strong> no es Súper Guía y tiene asignada <strong>H-20</strong> (${turns[idx].name}).`
+              });
+            }
+          });
+        }
+      });
+
+      turns.forEach(t => {
+        const assignedRooms = [];
+        people.forEach(p => {
+          if (p[t.key]) assignedRooms.push({ room: p[t.key], person: p.name });
+        });
+
+        fixedRooms.forEach(room => {
+          const count = assignedRooms.filter(ar => ar.room === room.id).length;
+          
+          if (count === 0 && room.id !== "H-20") {
+            warnings.push({
+              type: "warning",
+              msg: `<strong>Sala vacía:</strong> Nadie asignado a <strong>${room.name}</strong> en <em>${t.name}</em>.`
+            });
+          } else if (count > 1) {
+            const who = assignedRooms.filter(ar => ar.room === room.id).map(x => x.person).join(", ");
+            warnings.push({
+              type: "danger",
+              msg: `<strong>Conflicto:</strong> ${who} están al mismo tiempo en <strong>${room.name}</strong> (${t.name}).`
+            });
+          }
+        });
+      });
+
+      people.forEach(p => {
+        const roomCounts = {};
+        [p.turno1, p.turno2, p.turno3].forEach(r => {
+          if (r) roomCounts[r] = (roomCounts[r] || 0) + 1;
+        });
+
+        Object.keys(roomCounts).forEach(rId => {
+          if (roomCounts[rId] > 1) {
+            if (p.isSuper && rId === "H-20") return;
+
+            const rObj = fixedRooms.find(r => r.id === rId);
+            const rName = rObj ? rObj.name : rId;
+            warnings.push({
+              type: "warning",
+              msg: `<strong>Repetición:</strong> <strong>${p.name}</strong> repite <strong>${rName}</strong> ${roomCounts[rId]} veces.`
+            });
+          }
+        });
+      });
+
+      const roomLunchMap = {};
+      people.forEach(p => {
+        if (p.turno2) {
+          roomLunchMap[p.turno2] = { person: p.name, lunch: p.lunch };
+        }
+      });
+
+      const checkedPairs = new Set();
+      fixedRooms.forEach(room => {
+        if (room.neighbor) {
+          const pairKey = [room.id, room.neighbor].sort().join("-");
+          if (!checkedPairs.has(pairKey)) {
+            checkedPairs.add(pairKey);
+            const rA = roomLunchMap[room.id];
+            const rB = roomLunchMap[room.neighbor];
+
+            if (rA && rB && rA.lunch === rB.lunch) {
+              const neighborObj = fixedRooms.find(x => x.id === room.neighbor);
+              warnings.push({
+                type: "danger",
+                msg: `<strong>Choque comida vecinas:</strong> ${rA.person} (${room.name}) y ${rB.person} (${neighborObj.name}) a las <strong>${rA.lunch}</strong>.`
+              });
+            }
+          }
+        }
+      });
+
+      if (warnings.length === 0) {
+        panel.innerHTML = `<div class="warning-ok">✓ Todo en orden. Sin advertencias.</div>`;
+      } else {
+        panel.innerHTML = warnings
+          .map(w => `<div class="warning-item ${w.type}">${w.msg}</div>`)
+          .join("");
+      }
+    }
+
+    function showError(html) {
+      const err = document.getElementById("error-output");
+      err.innerHTML = html;
+      err.style.display = "block";
+    }
+
+    function generateSchedule() {
+      const err = document.getElementById("error-output");
+      err.style.display = "none";
+      err.innerHTML = "";
+
+      if (people.length === 0) {
+        showError("<strong>Error:</strong> No has registrado a ninguna persona.");
+        return;
+      }
+
+      const superGuia = people.find(p => p.isSuper);
+      if (!superGuia) {
+        showError("<strong>Error:</strong> Se necesita registrar obligatoriamente a 1 Súper Guía.");
+        return;
+      }
+
+      const generalStaff = people.filter(p => !p.isSuper);
+      const isSufficientStaff = people.length >= fixedRooms.length;
+
+      const allPlanetarios = people.filter(p => p.canPlanetario);
+      const allPlasmas = people.filter(p => p.canPlasma);
+
+      if (allPlanetarios.length === 0) {
+        showError("<strong>Falta personal:</strong> Nadie puede dar <strong>Planetario (H-21)</strong>.");
+        return;
+      }
+
+      if (allPlasmas.length === 0) {
+        showError("<strong>Falta personal:</strong> Nadie puede dar <strong>Plasma (H-27)</strong>.");
+        return;
+      }
+
+      const genPlan = generalStaff.filter(p => p.canPlanetario);
+      const genPla = generalStaff.filter(p => p.canPlasma);
+      const superCanPlan = superGuia.canPlanetario;
+      const superCanPla = superGuia.canPlasma;
+
+      function solveCompleteSchedule(enforceNoRepeatGeneral) {
+        const shifts = [new Map(), new Map(), new Map()];
+        const history = new Map();
+        people.forEach(p => history.set(p.id, []));
+
+        let superRolePerShift = ["H-20", "H-20", "H-20"];
+
+        if (isSufficientStaff) {
+          if (genPla.length < 3 && superCanPla) {
+            superRolePerShift[1] = "H-27";
+          }
+          if (genPlan.length < 3 && superCanPlan && superRolePerShift[0] === "H-20") {
+            superRolePerShift[0] = "H-21";
+          }
+        }
+
+        function canAssign(person, room, shiftIdx) {
+          if (room.id === "H-20") return person.isSuper;
+
+          if (isSufficientStaff && person.isSuper) {
+            if (room.req === "general") return false;
+            if (room.id === "H-21" && !superCanPlan) return false;
+            if (room.id === "H-27" && !superCanPla) return false;
+          }
+
+          if (room.req === "planetario" && !person.canPlanetario) return false;
+          if (room.req === "plasma" && !person.canPlasma) return false;
+
+          const past = history.get(person.id);
+          const alreadyInRoom = past.includes(room.id);
+
+          if (alreadyInRoom) {
+            if (person.isSuper && room.id === "H-20") return true;
+
+            if (enforceNoRepeatGeneral) {
+              const isTech = room.req === "planetario" || room.req === "plasma";
+              const techCount = room.req === "planetario" ? allPlanetarios.length : allPlasmas.length;
+              if (isTech && techCount < 3) return true;
+              return false;
+            }
+          }
+
+          return true;
+        }
+
+        function backtrackShift(shiftIdx) {
+          if (shiftIdx === 3) return true;
+
+          const currentMap = shifts[shiftIdx];
+          const usedInShift = new Set();
+
+          const roomsOrder = shuffle([
+            fixedRooms.find(r => r.id === "H-21"),
+            fixedRooms.find(r => r.id === "H-27"),
+            ...shuffle(fixedRooms.filter(r => r.req === "general"))
+          ]);
+
+          if (isSufficientStaff && superRolePerShift[shiftIdx] === "H-20") {
+            const h20 = fixedRooms.find(r => r.id === "H-20");
+            currentMap.set(superGuia, h20);
+            usedInShift.add(superGuia);
+          }
+
+          function backtrackRoom(roomIdx) {
+            if (roomIdx === roomsOrder.length) {
+              if (!usedInShift.has(superGuia)) {
+                const h20 = fixedRooms.find(r => r.id === "H-20");
+                currentMap.set(superGuia, h20);
+                usedInShift.add(superGuia);
+                history.get(superGuia.id).push("H-20");
+
+                const nextShiftOk = backtrackShift(shiftIdx + 1);
+                if (nextShiftOk) return true;
+
+                history.get(superGuia.id).pop();
+                currentMap.delete(superGuia);
+                usedInShift.delete(superGuia);
+                return false;
+              }
+
+              return backtrackShift(shiftIdx + 1);
+            }
+
+            const room = roomsOrder[roomIdx];
+            
+            if (isSufficientStaff && !usedInShift.has(superGuia) && superRolePerShift[shiftIdx] === room.id) {
+              currentMap.set(superGuia, room);
+              usedInShift.add(superGuia);
+              history.get(superGuia.id).push(room.id);
+
+              if (backtrackRoom(roomIdx + 1)) return true;
+
+              history.get(superGuia.id).pop();
+              currentMap.delete(superGuia);
+              usedInShift.delete(superGuia);
+              return false;
+            }
+
+            const candidates = shuffle(people.filter(p => !usedInShift.has(p) && canAssign(p, room, shiftIdx)));
+
+            for (const person of candidates) {
+              currentMap.set(person, room);
+              usedInShift.add(person);
+              history.get(person.id).push(room.id);
+
+              if (backtrackRoom(roomIdx + 1)) return true;
+
+              history.get(person.id).pop();
+              currentMap.delete(person);
+              usedInShift.delete(person);
+            }
+
+            return false;
+          }
+
+          return backtrackRoom(0);
+        }
+
+        const success = backtrackShift(0);
+        return success ? shifts : null;
+      }
+
+      let result = null;
+      for (let i = 0; i < 60; i++) {
+        result = solveCompleteSchedule(true);
+        if (result) break;
+      }
+
+      if (!result && !isSufficientStaff) {
+        for (let i = 0; i < 40; i++) {
+          result = solveCompleteSchedule(false);
+          if (result) break;
+        }
+      }
+
+      if (!result) {
+        showError(
+          `<strong>No se encontró combinación sin repetición:</strong><br>` +
+          `Verifica que haya suficiente personal capacitado o haz clic nuevamente en Generar Horario.`
+        );
+        return;
+      }
+
+      const [t1, t2, t3] = result;
+
+      people.forEach(person => {
+        const r1 = t1.get(person);
+        const r2 = t2.get(person);
+        const r3 = t3.get(person);
+
+        person.turno1 = r1 ? r1.id : "";
+        person.turno2 = r2 ? r2.id : "";
+        person.turno3 = r3 ? r3.id : "";
+
+        if (r2) {
+          person.lunch = r2.defaultLunch;
+        } else {
+          person.lunch = "1:30 PM";
+        }
+      });
+
+      renderScheduleTable();
+      validateSchedule();
+    }
+
+    // Modal de Exportación
+    function openExportModal() {
+      if (people.length === 0) {
+        alert("Agrega personal y genera el horario antes de exportar.");
+        return;
+      }
+      document.getElementById("export-modal").style.display = "flex";
+    }
+
+    function closeExportModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById("export-modal").style.display = "none";
+    }
+
+    function triggerExcelExport() {
+      closeExportModal();
+
+      const findRoomName = (id) => {
+        if (!id) return "Sin asignar";
+        const r = fixedRooms.find(x => x.id === id);
+        return r ? r.name : id;
+      };
+
+      let rowsHtml = "";
+      people.forEach(p => {
+        const r1 = findRoomName(p.turno1);
+        const r2 = findRoomName(p.turno2);
+        const r3 = findRoomName(p.turno3);
+        const lunch = p.lunch || "1:30 PM";
+
+        rowsHtml += `
+          <tr>
+            <td style="border:1px solid #999; padding:5px;">${p.name} ${p.isSuper ? '(Súper Guía)' : ''}</td>
+            <td style="border:1px solid #999; padding:5px;">${r1}</td>
+            <td style="border:1px solid #999; padding:5px;">${r2}</td>
+            <td style="border:1px solid #999; padding:5px;">${r3}</td>
+            <td style="border:1px solid #999; padding:5px; font-weight:bold; background-color:#f2f2f2;">${lunch}</td>
+          </tr>
+        `;
+      });
+
+      const excelTemplate = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Distribución de Horarios</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+          </head>
+          <body>
+            <table style="border-collapse:collapse; font-family:Arial, sans-serif;">
+              <thead>
+                <tr style="background-color:#1e293b; color:#ffffff; font-weight:bold;">
+                  <th style="border:1px solid #999; padding:8px;">Guías</th>
+                  <th style="border:1px solid #999; padding:8px;">10:00 - 12:30</th>
+                  <th style="border:1px solid #999; padding:8px;">12:30 - 3:00</th>
+                  <th style="border:1px solid #999; padding:8px;">3:00 - 5:00</th>
+                  <th style="border:1px solid #999; padding:8px;">Hora Comida</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `Turnos_Salas_${new Date().toISOString().slice(0, 10)}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function triggerPdfExport() {
+      closeExportModal();
+      window.print();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderRoomsFixed();
+      renderPeople();
+    });
+  </script>
+</body>
+</html>
